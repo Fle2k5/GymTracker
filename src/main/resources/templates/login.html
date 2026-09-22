@@ -1,0 +1,9 @@
+<!doctype html>
+<html th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title th:text="#{auth.login.title}">Login</title><link rel="stylesheet" th:href="@{/css/app.css}"></head>
+<body class="auth-page"><main class="auth-shell"><nav class="language-switcher auth-languages" role="group" th:attr="aria-label=#{app.language}"><a th:href="@{/login(lang='vi')}" th:classappend="${#locale.language == 'vi'} ? 'active' : ''">VI</a><a th:href="@{/login(lang='en')}" th:classappend="${#locale.language == 'en'} ? 'active' : ''">EN</a><a th:href="@{/login(lang='ja')}" th:classappend="${#locale.language == 'ja'} ? 'active' : ''">日本語</a></nav><section class="auth-card">
+<p class="eyebrow">GYM TRACKER</p><h1 th:text="#{auth.login.title}">Login</h1><p class="card-copy" th:text="#{auth.login.description}">Welcome back</p>
+<div th:if="${param.error}" class="alert error" th:text="#{auth.login.error}">Invalid credentials</div><div th:if="${param.logout}" class="alert success" th:text="#{auth.logout.success}">Logged out</div><div th:if="${success}" class="alert success" th:text="${success}"></div>
+<form method="post" th:action="@{/login}" class="auth-form"><label><span th:text="#{auth.email}">Email</span><input type="email" name="username" autocomplete="email" maxlength="190" required autofocus></label><label><span th:text="#{auth.password}">Password</span><input type="password" name="password" autocomplete="current-password" minlength="8" maxlength="72" required></label><button class="button primary" type="submit" th:text="#{auth.login.submit}">Login</button></form>
+<p class="auth-switch"><span th:text="#{auth.noAccount}">No account?</span> <a th:href="@{/register}" th:text="#{auth.register.link}">Register</a></p>
+</section></main></body></html>

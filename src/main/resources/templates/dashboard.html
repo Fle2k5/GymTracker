@@ -1,0 +1,178 @@
+<!doctype html>
+<html th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gym Tracker</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body th:attr="data-active-tab=${activeTab},data-personal-record=${personalRecord}">
+<div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+<div id="record-celebration" class="record-celebration" th:if="${personalRecord}">
+    <canvas id="confetti-canvas"></canvas>
+    <div class="record-card"><span class="trophy">🏆</span><strong th:text="${recordMessage}">New record!</strong></div>
+</div>
+<header class="hero">
+    <div><p class="eyebrow" th:text="#{app.eyebrow}">Workout control center</p><h1>Gym Tracker</h1><p class="subtitle" th:text="#{app.subtitle}">Workout tracker</p></div>
+    <div class="header-tools">
+        <div class="account-chip"><span th:text="${accountName}">User</span><form method="post" th:action="@{/logout}"><button type="submit" th:text="#{auth.logout}">Logout</button></form></div>
+        <div class="language-switcher" role="group" th:attr="aria-label=#{app.language}">
+            <a th:href="@{/(tab=${activeTab},lang='vi')}" th:classappend="${#locale.language == 'vi'} ? 'active' : ''">VI</a>
+            <a th:href="@{/(tab=${activeTab},lang='en')}" th:classappend="${#locale.language == 'en'} ? 'active' : ''">EN</a>
+            <a th:href="@{/(tab=${activeTab},lang='ja')}" th:classappend="${#locale.language == 'ja'} ? 'active' : ''">日本語</a>
+        </div>
+        <div class="today"><span th:text="#{app.today}">Today</span><strong th:text="${#temporals.format(today, 'dd/MM/yyyy')}">22/09/2026</strong></div>
+    </div>
+</header>
+
+<main class="shell">
+    <div th:if="${success}" class="alert success" th:text="${success}"></div>
+    <div th:if="${error}" class="alert error" th:text="${error}"></div>
+    <nav class="tabs" role="tablist" aria-label="Gym Tracker">
+        <button type="button" role="tab" aria-controls="tab-overview" class="tab-button" data-tab="overview" th:text="#{nav.overview}">Overview</button>
+        <button type="button" role="tab" aria-controls="tab-exercises" class="tab-button" data-tab="exercises" th:text="#{nav.exercises}">Exercises</button>
+        <button type="button" role="tab" aria-controls="tab-schedules" class="tab-button" data-tab="schedules" th:text="#{nav.schedules}">Schedule</button>
+        <button type="button" role="tab" aria-controls="tab-history" class="tab-button" data-tab="history" th:text="#{nav.history}">History</button>
+        <button type="button" role="tab" aria-controls="tab-nutrition" class="tab-button" data-tab="nutrition" th:text="#{nav.nutrition}">Nutrition</button>
+        <button type="button" role="tab" aria-controls="tab-milestones" class="tab-button" data-tab="milestones" th:text="#{nav.milestones}">Milestones</button>
+    </nav>
+
+    <section class="tab-panel" role="tabpanel" id="tab-overview">
+        <div class="section-heading"><div><p class="eyebrow" th:text="#{overview.eyebrow}">Dashboard</p><h2 th:text="#{overview.title}">Your journey</h2><p class="section-description" th:text="#{overview.description}">Overview</p></div></div>
+        <div class="stats-grid">
+            <article class="stat-card lime"><span>🏋️</span><strong th:text="${dashboardStats.exerciseCount}">0</strong><small th:text="#{overview.exercises}">Exercises</small></article>
+            <article class="stat-card cyan"><span>📅</span><strong th:text="${dashboardStats.scheduleCount}">0</strong><small th:text="#{overview.schedules}">Schedules</small></article>
+            <article class="stat-card violet"><span>⚡</span><strong th:text="${dashboardStats.workoutsThisWeek}">0</strong><small th:text="#{overview.workouts}">Workouts</small></article>
+            <article class="stat-card orange"><span>🔥</span><strong th:text="|${dashboardStats.maxWeight} kg|">0 kg</strong><small th:text="#{overview.maxWeight}">Max weight</small></article>
+            <article class="stat-card pink"><span>🎯</span><strong th:text="${dashboardStats.maxReps}">0</strong><small th:text="#{overview.maxReps}">Max reps</small></article>
+            <article class="stat-card blue"><span>🥗</span><strong th:text="|${nutritionToday.calories} kcal|">0 kcal</strong><small th:text="#{overview.todayCalories}">Calories</small></article>
+        </div>
+        <div class="overview-grid">
+            <article class="overview-card coach-overview">
+                <div class="card-title"><span class="spark-icon">✦</span><div><p class="eyebrow" th:text="#{coach.eyebrow}">AI</p><h3 th:text="#{coach.title}">Coach</h3></div></div>
+                <p class="card-copy" th:text="#{coach.description}">AI recommendation</p>
+                <div class="assistant-chat">
+                    <div class="chat-stream" aria-live="polite">
+                        <div class="chat-bubble" th:each="chat : ${assistantMessages}" th:classappend="${chat.role}" th:text="${chat.text}">Message</div>
+                        <p class="empty compact" th:if="${#lists.isEmpty(assistantMessages)}" th:text="#{assistant.empty}">Start a chat</p>
+                    </div>
+                    <form class="chat-form" method="post" th:action="@{/assistant/chat}">
+                        <input name="message" maxlength="1000" required th:placeholder="#{assistant.placeholder}">
+                        <button class="button primary" type="submit" th:text="#{assistant.send}">Send</button>
+                    </form>
+                    <div class="pending-action" th:if="${assistantPending != null}">
+                        <strong th:text="#{assistant.confirm.title}">Confirm</strong>
+                        <span th:text="${assistantPending.name}">Exercise</span>
+                        <div class="pending-buttons"><form method="post" th:action="@{/assistant/action/confirm}"><input type="hidden" name="token" th:value="${assistantPending.token}"><button type="submit" class="button small primary" th:text="#{assistant.confirm}">Confirm</button></form><form method="post" th:action="@{/assistant/action/cancel}"><input type="hidden" name="token" th:value="${assistantPending.token}"><button type="submit" class="button small ghost" th:text="#{assistant.cancel}">Cancel</button></form></div>
+                    </div>
+                    <p class="assistant-help" th:text="#{assistant.command.help}">Commands</p>
+                </div>
+                <div class="subsection-label" th:text="#{coach.quickPlan}">Quick plan</div>
+                <form class="coach-form compact" method="post" th:action="@{/coach/recommend}">
+                    <label><span th:text="#{coach.goal}">Goal</span><select name="goal"><option value="muscle" th:text="#{coach.goal.muscle}">Muscle</option><option value="strength" th:text="#{coach.goal.strength}">Strength</option><option value="general" th:text="#{coach.goal.general}">Fitness</option></select></label>
+                    <label><span th:text="#{coach.duration}">Time</span><select name="duration"><option value="30" th:text="#{coach.minutes(30)}">30</option><option value="45" selected th:text="#{coach.minutes(45)}">45</option><option value="60" th:text="#{coach.minutes(60)}">60</option><option value="90" th:text="#{coach.minutes(90)}">90</option></select></label>
+                    <label><span th:text="#{coach.equipment}">Equipment</span><select name="equipment"><option value="home" th:text="#{coach.equipment.home}">Home</option><option value="gym" th:text="#{coach.equipment.gym}">Gym</option><option value="bodyweight" th:text="#{coach.equipment.bodyweight}">Bodyweight</option></select></label>
+                    <label class="wide"><span th:text="#{coach.limitations}">Limitations</span><textarea name="limitations" rows="2" maxlength="300" th:placeholder="#{coach.limitations.placeholder}"></textarea></label>
+                    <button class="button primary coach-submit" type="submit" th:text="#{coach.submit}">Suggest</button>
+                </form>
+                <div class="coach-result overview-result" th:if="${coachResult != null}">
+                    <span class="coach-badge" th:classappend="${coachAiPowered} ? 'ai' : 'local'" th:text="${coachAiPowered} ? #{coach.aiBadge} : #{coach.localBadge}">AI</span>
+                    <div class="coach-text" th:text="${coachResult}">Result</div>
+                </div>
+                <p class="coach-disclaimer" th:text="#{coach.disclaimer}">Disclaimer</p>
+            </article>
+            <article class="overview-card recent-card">
+                <div class="card-title"><span class="spark-icon">↗</span><h3 th:text="#{overview.recent}">Recent</h3></div>
+                <div class="recent-list">
+                    <div class="recent-item" th:each="entry,stat : ${history}" th:if="${stat.index < 6}">
+                        <span class="recent-dot"></span><div><strong th:text="${entry.exerciseName}">Squat</strong><small th:text="|${#temporals.format(entry.date, 'dd/MM')} · ${entry.weight} kg × ${entry.reps}|">Detail</small></div>
+                    </div>
+                    <p class="empty compact" th:if="${#lists.isEmpty(history)}" th:text="#{history.empty}">No history</p>
+                </div>
+            </article>
+            <article class="overview-card profile-card">
+                <div class="card-title"><span class="spark-icon">◎</span><h3 th:text="#{profile.title}">BMI profile</h3></div>
+                <p class="card-copy" th:text="#{profile.description}">Adult BMI</p>
+                <div class="bmi-result" th:if="${fitnessProfile != null}"><strong th:text="${fitnessProfile.bmi}">20.0</strong><span>BMI</span><p><span th:if="${fitnessProfile.category == 'underweight'}" th:text="#{profile.category.underweight}">Underweight</span><span th:if="${fitnessProfile.category == 'healthy'}" th:text="#{profile.category.healthy}">Healthy</span><span th:if="${fitnessProfile.category == 'overweight'}" th:text="#{profile.category.overweight}">Overweight</span><span th:if="${fitnessProfile.category == 'obesity'}" th:text="#{profile.category.obesity}">Obesity</span></p></div>
+                <form class="profile-form" method="post" th:action="@{/profile}"><label><span th:text="#{profile.sex}">Sex</span><select name="sex"><option value="male" th:selected="${fitnessProfile != null and fitnessProfile.sex == 'male'}" th:text="#{profile.male}">Male</option><option value="female" th:selected="${fitnessProfile != null and fitnessProfile.sex == 'female'}" th:text="#{profile.female}">Female</option></select></label><label><span th:text="#{profile.height}">Height</span><input type="number" step="0.1" min="100" max="250" name="heightCm" required th:value="${fitnessProfile != null ? fitnessProfile.heightCm : 174}"></label><label><span th:text="#{profile.weight}">Weight</span><input type="number" step="0.1" min="25" max="400" name="weightKg" required th:value="${fitnessProfile != null ? fitnessProfile.weightKg : 56}"></label><button class="button accent" type="submit" th:text="#{profile.calculate}">Calculate</button></form>
+                <p class="coach-disclaimer" th:text="#{profile.disclaimer}">Reference only</p>
+            </article>
+        </div>
+    </section>
+
+    <section class="tab-panel" role="tabpanel" id="tab-exercises">
+        <div class="section-heading"><div><p class="eyebrow" th:text="#{exercise.eyebrow}">Library</p><h2 th:text="#{exercise.title}">Exercises</h2><p class="section-description" th:text="#{tab.exercise.description}">Description</p></div><span class="count" th:text="#{exercise.count(${#lists.size(exercises)})}">0</span></div>
+        <form class="quick-form" method="post" th:action="@{/exercises}">
+            <label><span th:text="#{exercise.date}">Date</span><input type="date" name="date" th:value="${today}" required></label>
+            <label class="wide"><span th:text="#{exercise.name}">Name</span><input name="name" th:placeholder="#{exercise.name.placeholder}" required maxlength="120"></label>
+            <label><span th:text="#{exercise.weight}">Weight</span><input type="number" min="0" name="weight" value="0" required></label>
+            <label><span th:text="#{exercise.reps}">Reps</span><input type="number" min="1" name="reps" value="8" required></label>
+            <button class="button primary" type="submit" th:text="#{exercise.add}">Add</button>
+        </form>
+        <div class="table-wrap"><table><thead><tr><th th:text="#{exercise.date}">Date</th><th th:text="#{exercise.name}">Name</th><th>Kg</th><th th:text="#{exercise.reps}">Reps</th><th th:text="#{exercise.actions}">Actions</th></tr></thead><tbody>
+            <tr th:each="exercise : ${exercises}"><td><input th:form="|exercise-${exercise.id}|" type="date" name="date" th:value="${exercise.date}" required></td><td><input th:form="|exercise-${exercise.id}|" name="name" th:value="${exercise.name}" required maxlength="120"></td><td><input th:form="|exercise-${exercise.id}|" class="number" type="number" min="0" name="weight" th:value="${exercise.weight}" required></td><td><input th:form="|exercise-${exercise.id}|" class="number" type="number" min="1" name="reps" th:value="${exercise.reps}" required></td>
+                <td class="actions"><form th:id="|exercise-${exercise.id}|" method="post" th:action="@{/exercises/{id}/update(id=${exercise.id})}"><button class="button small" type="submit" th:text="#{exercise.update}">Update</button></form><form method="post" th:action="@{/exercises/{id}/history(id=${exercise.id})}"><input type="hidden" name="date" th:value="${today}"><button class="button small accent" type="submit" th:text="#{exercise.saveWorkout}">Save</button></form><form method="post" th:action="@{/exercises/{id}/delete(id=${exercise.id})}" th:attr="data-confirm=#{exercise.delete.confirm}"><button class="button small danger" type="submit" th:text="#{exercise.delete}">Delete</button></form></td></tr>
+            <tr th:if="${#lists.isEmpty(exercises)}"><td colspan="5" class="empty" th:text="#{exercise.empty}">No exercises</td></tr></tbody></table></div>
+    </section>
+
+    <section class="tab-panel" role="tabpanel" id="tab-schedules">
+        <div class="section-heading"><div><p class="eyebrow" th:text="#{schedule.eyebrow}">Plan</p><h2 th:text="#{schedule.title}">Schedule</h2><p class="section-description" th:text="#{tab.schedule.description}">Description</p></div><span class="count" th:text="#{schedule.count(${#lists.size(schedules)})}">0</span></div>
+        <form class="quick-form schedule-form" method="post" th:action="@{/schedules}"><label><span th:text="#{schedule.day}">Day</span><input name="day" th:placeholder="#{schedule.day.placeholder}" required maxlength="80"></label><label class="wide"><span th:text="#{schedule.muscle}">Muscle</span><input name="muscleGroup" th:placeholder="#{schedule.muscle.placeholder}" required maxlength="160"></label><button class="button primary" type="submit" th:text="#{schedule.add}">Add</button></form>
+        <div class="schedule-grid"><article class="schedule-card" th:each="schedule : ${schedules}">
+            <form class="schedule-header" method="post" th:action="@{/schedules/{id}/update(id=${schedule.id})}"><div class="schedule-title"><input class="day-input" name="day" th:value="${schedule.day}" required><input class="muscle-input" name="muscleGroup" th:value="${schedule.muscleGroup}" required></div><button class="icon-button" type="submit" th:title="#{schedule.update}">✓</button></form>
+            <div class="schedule-exercises"><div class="scheduled-item" th:each="item : ${schedule.exercises}" th:with="latest=${latestHistory[#strings.toLowerCase(item.exerciseName)]}"><div class="item-summary"><strong th:text="${item.exerciseName}">Bench</strong><span th:if="${latest != null}" th:text="#{schedule.latest(${#temporals.format(latest.date, 'dd/MM/yyyy')},${latest.weight},${latest.reps})}">Latest</span><span th:if="${latest == null}" th:text="#{schedule.noHistory}">None</span></div>
+                <details><summary th:text="#{schedule.record}">Record</summary><form class="record-form" method="post" th:action="@{/schedule-exercises/{id}/record(id=${item.id})}"><input type="date" name="date" th:value="${today}" required><input type="number" min="0" name="weight" th:placeholder="#{schedule.weight}" required><input type="number" min="1" name="reps" th:placeholder="#{schedule.reps}" required><button class="button small accent" type="submit" th:text="#{schedule.save}">Save</button></form></details>
+                <form method="post" th:action="@{/schedule-exercises/{id}/delete(id=${item.id})}" th:attr="data-confirm=#{schedule.remove.confirm}"><button class="text-danger" type="submit" th:attr="aria-label=#{schedule.remove.label}">×</button></form></div><p class="empty compact" th:if="${#lists.isEmpty(schedule.exercises)}" th:text="#{schedule.emptyItems}">Empty</p></div>
+            <form class="add-scheduled" method="post" th:action="@{/schedules/{id}/exercises(id=${schedule.id})}"><select name="exerciseId" required><option value="" selected disabled th:text="#{schedule.chooseExercise}">Choose</option><option th:each="exercise : ${exercises}" th:value="${exercise.id}" th:text="${exercise.name}"></option></select><button class="button small" type="submit" th:disabled="${#lists.isEmpty(exercises)}" th:text="#{schedule.addExercise}">Add</button></form>
+            <form class="delete-schedule" method="post" th:action="@{/schedules/{id}/delete(id=${schedule.id})}" th:attr="data-confirm=#{schedule.delete.confirm}"><button class="button small danger ghost" type="submit" th:text="#{schedule.delete}">Delete</button></form>
+        </article><div class="empty-card" th:if="${#lists.isEmpty(schedules)}" th:text="#{schedule.empty}">Empty</div></div>
+    </section>
+
+    <section class="tab-panel" role="tabpanel" id="tab-history">
+        <div class="section-heading"><div><p class="eyebrow" th:text="#{history.eyebrow}">Log</p><h2 th:text="#{history.title}">History</h2><p class="section-description" th:text="#{tab.history.description}">Description</p></div><span class="count" th:text="#{history.count(${#lists.size(history)})}">0</span></div>
+        <form class="history-filter" method="get" action="/"><input type="hidden" name="tab" value="history"><label><span th:text="#{history.search}">Search</span><input name="q" th:value="${historyQuery}" th:placeholder="#{history.search.placeholder}"></label><label><span th:text="#{history.from}">From</span><input type="date" name="from" th:value="${historyFrom}"></label><label><span th:text="#{history.to}">To</span><input type="date" name="to" th:value="${historyTo}"></label><button class="button accent" type="submit" th:text="#{history.filter}">Filter</button><a class="button ghost link-button" href="/?tab=history" th:text="#{history.clear}">Clear</a></form>
+        <div class="table-wrap"><table><thead><tr><th th:text="#{history.id}">ID</th><th th:text="#{history.date}">Date</th><th th:text="#{history.exercise}">Exercise</th><th th:text="#{history.weight}">Weight</th><th th:text="#{history.reps}">Reps</th><th></th></tr></thead><tbody>
+            <tr th:each="entry : ${history}"><td class="muted" th:text="${entry.id}">1</td><td th:text="${#temporals.format(entry.date, 'dd/MM/yyyy')}">Date</td><td><strong th:text="${entry.exerciseName}">Squat</strong></td><td th:text="|${entry.weight} kg|">80</td><td th:text="${entry.reps}">8</td><td><form method="post" th:action="@{/history/{id}/delete(id=${entry.id})}" th:attr="data-confirm=#{history.delete.confirm}"><button class="button small danger" type="submit" th:text="#{history.delete}">Delete</button></form></td></tr>
+            <tr th:if="${#lists.isEmpty(history)}"><td colspan="6" class="empty" th:text="#{history.empty}">Empty</td></tr></tbody></table></div>
+    </section>
+
+    <section class="tab-panel" role="tabpanel" id="tab-nutrition">
+        <div class="section-heading"><div><p class="eyebrow" th:text="#{nutrition.eyebrow}">Fuel</p><h2 th:text="#{nutrition.title}">Nutrition</h2><p class="section-description" th:text="#{tab.nutrition.description}">Description</p></div></div>
+        <article class="nutrition-ai">
+            <div><p class="eyebrow" th:text="#{nutrition.ai.eyebrow}">AI FOOD SCAN</p><h3 th:text="#{nutrition.ai.title}">Describe your meal</h3><p class="card-copy" th:text="#{nutrition.ai.description}">Include grams and cooking method.</p></div>
+            <form class="nutrition-ai-form" method="post" th:action="@{/nutrition/analyze}"><label><span th:text="#{nutrition.meal}">Meal</span><select name="mealType"><option value="breakfast" th:text="#{nutrition.meal.breakfast}">Breakfast</option><option value="lunch" th:text="#{nutrition.meal.lunch}">Lunch</option><option value="dinner" th:text="#{nutrition.meal.dinner}">Dinner</option><option value="snack" th:text="#{nutrition.meal.snack}">Snack</option></select></label><label class="wide"><span th:text="#{nutrition.ai.input}">Meal details</span><textarea name="description" rows="3" maxlength="1200" required th:placeholder="#{nutrition.ai.placeholder}"></textarea></label><button class="button primary" type="submit" th:text="#{nutrition.ai.analyze}">Analyze</button></form>
+            <div class="meal-preview" th:if="${mealPending != null}"><div class="macro-grid"><article><strong th:text="${mealPending.estimate.calories}">0</strong><small>kcal</small></article><article><strong th:text="|${mealPending.estimate.protein}g|">0</strong><small>P</small></article><article><strong th:text="|${mealPending.estimate.carbs}g|">0</strong><small>C</small></article><article><strong th:text="|${mealPending.estimate.fat}g|">0</strong><small>F</small></article></div><p th:text="${mealPending.estimate.explanation}">Explanation</p><p class="coach-disclaimer" th:text="#{nutrition.ai.disclaimer}">Estimate only</p><div class="pending-buttons"><form method="post" th:action="@{/nutrition/analyze/save}"><input type="hidden" name="token" th:value="${mealPending.token}"><button class="button small primary" type="submit" th:text="#{nutrition.ai.save}">Save</button></form><form method="post" th:action="@{/nutrition/analyze/cancel}"><input type="hidden" name="token" th:value="${mealPending.token}"><button class="button small ghost" type="submit" th:text="#{assistant.cancel}">Cancel</button></form></div></div>
+        </article>
+        <div class="macro-grid"><article><strong th:text="|${nutritionToday.calories}|">0</strong><small>kcal</small></article><article><strong th:text="|${nutritionToday.protein}g|">0g</strong><small th:text="#{nutrition.protein}">Protein</small></article><article><strong th:text="|${nutritionToday.carbs}g|">0g</strong><small th:text="#{nutrition.carbs}">Carbs</small></article><article><strong th:text="|${nutritionToday.fat}g|">0g</strong><small th:text="#{nutrition.fat}">Fat</small></article></div>
+        <form class="nutrition-form" method="post" th:action="@{/nutrition}">
+            <label><span th:text="#{nutrition.date}">Date</span><input type="date" name="date" th:value="${today}" required></label>
+            <label><span th:text="#{nutrition.meal}">Meal</span><select name="mealType"><option value="breakfast" th:text="#{nutrition.meal.breakfast}">Breakfast</option><option value="lunch" th:text="#{nutrition.meal.lunch}">Lunch</option><option value="dinner" th:text="#{nutrition.meal.dinner}">Dinner</option><option value="snack" th:text="#{nutrition.meal.snack}">Snack</option></select></label>
+            <label class="wide"><span th:text="#{nutrition.food}">Food</span><input name="foodName" maxlength="160" required th:placeholder="#{nutrition.food.placeholder}"></label>
+            <label><span th:text="#{nutrition.calories}">Calories</span><input type="number" name="calories" min="0" value="0" required></label>
+            <label><span th:text="#{nutrition.protein}">Protein</span><input type="number" name="protein" min="0" value="0" required></label>
+            <label><span th:text="#{nutrition.carbs}">Carbs</span><input type="number" name="carbs" min="0" value="0" required></label>
+            <label><span th:text="#{nutrition.fat}">Fat</span><input type="number" name="fat" min="0" value="0" required></label>
+            <label class="wide"><span th:text="#{nutrition.notes}">Notes</span><input name="notes" maxlength="400" th:placeholder="#{nutrition.notes.placeholder}"></label>
+            <button class="button primary" type="submit" th:text="#{nutrition.add}">Add meal</button>
+        </form>
+        <div class="table-wrap"><table><thead><tr><th th:text="#{nutrition.date}">Date</th><th th:text="#{nutrition.meal}">Meal</th><th th:text="#{nutrition.food}">Food</th><th>kcal</th><th>P / C / F</th><th></th></tr></thead><tbody>
+            <tr th:each="entry : ${nutritionEntries}"><td th:text="${#temporals.format(entry.date, 'dd/MM/yyyy')}">Date</td><td><span th:if="${entry.mealType == 'breakfast'}" th:text="#{nutrition.meal.breakfast}">Breakfast</span><span th:if="${entry.mealType == 'lunch'}" th:text="#{nutrition.meal.lunch}">Lunch</span><span th:if="${entry.mealType == 'dinner'}" th:text="#{nutrition.meal.dinner}">Dinner</span><span th:if="${entry.mealType == 'snack'}" th:text="#{nutrition.meal.snack}">Snack</span></td><td><strong th:text="${entry.foodName}">Food</strong><small class="row-note" th:if="${!#strings.isEmpty(entry.notes)}" th:text="${entry.notes}">Note</small></td><td th:text="${entry.calories}">0</td><td th:text="|${entry.protein}g / ${entry.carbs}g / ${entry.fat}g|">0</td><td><form method="post" th:action="@{/nutrition/{id}/delete(id=${entry.id})}" th:attr="data-confirm=#{nutrition.delete.confirm}"><button class="button small danger" type="submit" th:text="#{nutrition.delete}">Delete</button></form></td></tr>
+            <tr th:if="${#lists.isEmpty(nutritionEntries)}"><td colspan="6" class="empty" th:text="#{nutrition.empty}">Empty</td></tr></tbody></table></div>
+    </section>
+
+    <section class="tab-panel" role="tabpanel" id="tab-milestones">
+        <div class="section-heading"><div><p class="eyebrow" th:text="#{milestone.eyebrow}">Journey</p><h2 th:text="#{milestone.title}">Milestones</h2><p class="section-description" th:text="#{tab.milestones.description}">Description</p></div></div>
+        <form class="milestone-form" method="post" enctype="multipart/form-data" th:action="@{/milestones}">
+            <label><span th:text="#{milestone.form.title}">Title</span><input name="title" required maxlength="140" th:placeholder="#{milestone.form.title.placeholder}"></label>
+            <label><span th:text="#{milestone.date}">Date</span><input type="date" name="date" th:value="${today}" required></label>
+            <label class="wide"><span th:text="#{milestone.description}">Description</span><textarea name="description" maxlength="600" rows="2" th:placeholder="#{milestone.description.placeholder}"></textarea></label>
+            <label class="wide file-label"><span th:text="#{milestone.image}">Image</span><input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif" required><small th:text="#{milestone.image.help}">Help</small></label>
+            <button class="button primary" type="submit" th:text="#{milestone.add}">Save</button>
+        </form>
+        <div class="milestone-grid"><article class="milestone-card" th:each="item : ${milestones}"><div class="milestone-image-wrap"><img loading="lazy" th:src="@{/milestones/{id}/image(id=${item.id})}" th:alt="${item.title}"></div><div class="milestone-body"><time th:text="${#temporals.format(item.date, 'dd/MM/yyyy')}">Date</time><h3 th:text="${item.title}">Title</h3><p th:text="${item.description}">Description</p><form method="post" th:action="@{/milestones/{id}/delete(id=${item.id})}" th:attr="data-confirm=#{milestone.delete.confirm}"><button class="button small danger ghost" type="submit" th:text="#{milestone.delete}">Delete</button></form></div></article><div class="empty-card milestone-empty" th:if="${#lists.isEmpty(milestones)}" th:text="#{milestone.empty}">Empty</div></div>
+    </section>
+</main>
+<footer th:text="#{footer}">Gym Tracker</footer>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>
