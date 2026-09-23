@@ -19,6 +19,7 @@ Bản web thay thế ứng dụng desktop JavaFX `GymTrackerFx`. Project dùng J
 - AI Coach nằm ngay trong Tổng quan, có hội thoại theo phiên và đề xuất nhóm cơ cùng 3–5 bài tập dựa trên dữ liệu hiện có.
 - Trợ lý đọc hồ sơ chiều cao/cân nặng/BMI, lịch tập, lịch sử gần đây và tổng dinh dưỡng hôm nay để trả lời theo ngữ cảnh riêng.
 - AI có thể liệt kê, đề nghị thêm hoặc xóa bài tập; mọi thay đổi database đều phải được người dùng xác nhận trong 5 phút.
+- Lệnh tự nhiên chấp nhận nhiều cách viết như `thêm Squat 100kg 5reps`, `thêm bài Squat, 100 kg x 5`; nếu bài đã tồn tại, trợ lý đề nghị cập nhật thay vì báo trùng.
 - AI phân tích nguyên liệu, định lượng và cách nấu để ước tính calories/protein/carbs/chất béo; kết quả chỉ lưu khi xác nhận.
 - Hồ sơ BMI người lớn cho nam/nữ với phân loại thể trạng tham khảo.
 - Tự dùng gợi ý nội bộ nếu chưa cấu hình OpenAI hoặc API tạm thời không khả dụng.

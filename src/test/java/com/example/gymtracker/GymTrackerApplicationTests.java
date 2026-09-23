@@ -181,6 +181,67 @@ class GymTrackerApplicationTests {
     }
 
     @Test
+    void addParserAcceptsNaturalSpacingAndPunctuationWithoutCorrectingNames() {
+        var commands = java.util.List.of(
+                "thêm Squad 100kg 5rep",
+                "thêm bài Romanian Deadlift 100 kg 5 reps",
+                "thêm Front Squat, 100kg x 5",
+                "vui lòng thêm giúp tôi bài tập Bulgarian Split Squat: 24 kg × 10 nhé",
+                "please add exercise Incline Press, 30kg x 8 reps",
+                "種目追加 ラットプルダウン 45kg 10回"
+        );
+        var expectedNames = java.util.List.of("Squad", "Romanian Deadlift", "Front Squat",
+                "Bulgarian Split Squat", "Incline Press", "ラットプルダウン");
+
+        for (int i = 0; i < commands.size(); i++) {
+            var pending = assistantService.reply(commands.get(i), Locale.forLanguageTag("vi")).pendingAction();
+            assertThat(pending).as(commands.get(i)).isNotNull();
+            assertThat(pending.name()).isEqualTo(expectedNames.get(i));
+            assertThat(pending.weight()).isEqualTo(i == 3 ? 24 : i == 4 ? 30 : i == 5 ? 45 : 100);
+        }
+
+        var repeatedWord = assistantService.reply("add exercise Exercise Ball Crunch 12kg 15 reps", Locale.ENGLISH);
+        assertThat(repeatedWord.pendingAction().name()).isEqualTo("Exercise Ball Crunch");
+        var fullWidth = assistantService.reply("種目追加　スクワット　４０ｋｇ　１０回", Locale.JAPANESE);
+        assertThat(fullWidth.pendingAction().name()).isEqualTo("スクワット");
+        assertThat(fullWidth.pendingAction().weight()).isEqualTo(40);
+        assertThat(fullWidth.pendingAction().reps()).isEqualTo(10);
+    }
+
+    @Test
+    void advisoryQuestionThatContainsAddSyntaxDoesNotCreateMutation() {
+        var reply = assistantService.reply(
+                "thêm Squat 100kg 5 reps có phù hợp cho người mới không?", Locale.forLanguageTag("vi"));
+        assertThat(reply.pendingAction()).isNull();
+    }
+
+    @Test
+    void existingExerciseBecomesConfirmedUpdateAndSimilarSpellingStaysSeparate() {
+        service.addExercise("Squat", 40, 8, LocalDate.now().minusDays(1));
+
+        var update = assistantService.reply("thêm Squat 100kg 5reps", Locale.forLanguageTag("vi"));
+        assertThat(update.pendingAction()).isNotNull();
+        assertThat(update.pendingAction().type()).isEqualTo("update");
+        assertThat(update.pendingAction().name()).isEqualTo("Squat");
+        assistantService.execute(update.pendingAction(), update.pendingAction().token(), Locale.forLanguageTag("vi"));
+
+        assertThat(exerciseRepository.findByOwnerIdAndNameIgnoreCase(owner.getId(), "Squat")).get()
+                .extracting("weight", "reps").containsExactly(100, 5);
+        var differentName = assistantService.reply("thêm Squad 20kg 10rep", Locale.forLanguageTag("vi"));
+        assertThat(differentName.pendingAction().type()).isEqualTo("add");
+        assertThat(differentName.pendingAction().name()).isEqualTo("Squad");
+    }
+
+    @Test
+    void japaneseFullWidthPunctuationDoesNotPolluteExerciseName() {
+        var pending = assistantService.reply("種目追加：スクワット、４０ｋｇ×１０回。", Locale.JAPANESE).pendingAction();
+        assertThat(pending).isNotNull();
+        assertThat(pending.name()).isEqualTo("スクワット");
+        assertThat(pending.weight()).isEqualTo(40);
+        assertThat(pending.reps()).isEqualTo(10);
+    }
+
+    @Test
     void profileRejectsNonFiniteNumbers() {
         assertThatThrownBy(() -> profileService.save("male", Double.NaN, 60))
                 .isInstanceOf(IllegalArgumentException.class).hasMessage("error.profile.height");

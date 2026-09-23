@@ -181,4 +181,19 @@ class DashboardControllerTest {
         org.assertj.core.api.Assertions.assertThat(exercises.findByOwnerIdAndNameIgnoreCase(owner.getId(), "AI Safety Test")).isPresent();
         org.assertj.core.api.Assertions.assertThat(session.getAttribute("assistantPending")).isNull();
     }
+
+    @Test
+    void invalidAssistantMessageClearsOlderPendingProposal() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        mvc.perform(post("/assistant/chat").with(user(owner.getEmail()).roles("USER")).with(csrf()).session(session)
+                        .param("message", "thêm bài Stale Proposal 10kg 12 reps"))
+                .andExpect(status().is3xxRedirection());
+        org.assertj.core.api.Assertions.assertThat(session.getAttribute("assistantPending")).isNotNull();
+
+        mvc.perform(post("/assistant/chat").with(user(owner.getEmail()).roles("USER")).with(csrf()).session(session)
+                        .param("message", "   "))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attributeExists("error"));
+        org.assertj.core.api.Assertions.assertThat(session.getAttribute("assistantPending")).isNull();
+    }
 }

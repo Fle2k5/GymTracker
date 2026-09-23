@@ -81,11 +81,11 @@ public class DashboardController {
 
     @PostMapping("/assistant/chat")
     public String assistantChat(@RequestParam String message, RedirectAttributes flash, HttpSession session) {
+        session.removeAttribute("assistantPending");
         try {
             var reply = assistant.reply(message, LocaleContextHolder.getLocale(), chatMessages(session));
             addChat(session, new AssistantConversationService.ChatMessage("user", message.trim()));
             addChat(session, new AssistantConversationService.ChatMessage("assistant", reply.text()));
-            session.removeAttribute("assistantPending");
             session.setAttribute("assistantPending", reply.pendingAction());
         } catch (AppException ex) {
             flash.addFlashAttribute("error", messages.getMessage(ex.getCode(), ex.getArguments(), LocaleContextHolder.getLocale()));
