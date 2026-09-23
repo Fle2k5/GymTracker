@@ -124,13 +124,17 @@ public class GymTrackerService {
         if (scheduleExerciseRepository.existsByOwnerIdAndScheduleIdAndExerciseId(owner.getId(), scheduleId, exerciseId)) {
             throw new AppException("error.schedule.duplicateExercise");
         }
-        scheduleExerciseRepository.save(new ScheduleExercise(owner, schedule, exercise));
+        ScheduleExercise item = new ScheduleExercise(owner, schedule, exercise);
+        schedule.addExercise(item);
+        scheduleExerciseRepository.save(item);
     }
 
     public void deleteScheduleExercise(long id) {
         Long ownerId = currentUser.require().getId();
-        if (!scheduleExerciseRepository.existsByIdAndOwnerId(id, ownerId)) throw new AppException("error.scheduleExercise.notFound");
-        scheduleExerciseRepository.deleteByIdAndOwnerId(id, ownerId);
+        ScheduleExercise item = scheduleExerciseRepository.findByIdAndOwnerId(id, ownerId)
+                .orElseThrow(() -> new AppException("error.scheduleExercise.notFound"));
+        item.getSchedule().removeExercise(item);
+        // orphanRemoval deletes the owning row at flush while keeping the in-memory graph consistent.
     }
 
     public WorkoutAchievement recordScheduledWorkout(long scheduledExerciseId, int weight, int reps, LocalDate date) {

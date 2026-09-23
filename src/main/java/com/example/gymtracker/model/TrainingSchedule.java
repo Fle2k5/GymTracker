@@ -39,6 +39,16 @@ public class TrainingSchedule {
     public String getDay() { return day; }
     public String getMuscleGroup() { return muscleGroup; }
     public List<ScheduleExercise> getExercises() { return exercises; }
+    public void addExercise(ScheduleExercise exercise) {
+        if (exercise == null || exercise.getSchedule() != this) {
+            throw new IllegalArgumentException("Schedule exercise belongs to another schedule");
+        }
+        if (!exercises.contains(exercise)) exercises.add(exercise);
+    }
+    public void removeExercise(ScheduleExercise exercise) {
+        if (exercise == null || exercise.getSchedule() != this) return;
+        exercises.remove(exercise);
+    }
     public void setDay(String day) { this.day = day; }
     public void setMuscleGroup(String muscleGroup) { this.muscleGroup = muscleGroup; }
 }

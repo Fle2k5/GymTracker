@@ -95,6 +95,23 @@ class GymTrackerApplicationTests {
     }
 
     @Test
+    void scheduleRelationshipStaysConsistentInsideOneTransaction() {
+        service.addExercise("Row", 45, 10, LocalDate.now());
+        service.addSchedule("Friday", "Back");
+        TrainingSchedule schedule = service.schedules().get(0);
+        Long exerciseId = exerciseRepository.findByOwnerIdAndNameIgnoreCase(owner.getId(), "Row").orElseThrow().getId();
+
+        service.addScheduleExercise(schedule.getId(), exerciseId);
+
+        assertThat(schedule.getExercises()).singleElement()
+                .satisfies(item -> assertThat(item.getExerciseName()).isEqualTo("Row"));
+        Long itemId = schedule.getExercises().get(0).getId();
+        service.deleteScheduleExercise(itemId);
+        assertThat(schedule.getExercises()).isEmpty();
+        assertThat(service.schedules().get(0).getExercises()).isEmpty();
+    }
+
+    @Test
     void rejectsZeroReps() {
         org.assertj.core.api.Assertions.assertThatThrownBy(
                 () -> service.addExercise("Invalid", 20, 0, LocalDate.now()))
