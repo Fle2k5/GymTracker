@@ -191,6 +191,52 @@ class GymTrackerApplicationTests {
     }
 
     @Test
+    void japaneseCompactAddCommandSupportsNoSpacesAndKeepsQuestionsNonMutating() {
+        var add = assistantService.reply("追加ベンチプレス60kg 8回", Locale.JAPANESE);
+        assertThat(add.pendingAction()).isNotNull();
+        assertThat(add.pendingAction().type()).isEqualTo("add");
+        assertThat(add.pendingAction().name()).isEqualTo("ベンチプレス");
+        assertThat(add.pendingAction().weight()).isEqualTo(60);
+        assertThat(add.pendingAction().reps()).isEqualTo(8);
+        assertThat(add.text()).contains("追加");
+
+        service.addExercise("ベンチプレス", 40, 10, LocalDate.now());
+        var update = assistantService.reply("種目追加ベンチプレス60kg8回", Locale.JAPANESE);
+        assertThat(update.pendingAction()).isNotNull();
+        assertThat(update.pendingAction().type()).isEqualTo("update");
+        assertThat(update.pendingAction().name()).isEqualTo("ベンチプレス");
+        assertThat(update.pendingAction().weight()).isEqualTo(60);
+        assertThat(update.pendingAction().reps()).isEqualTo(8);
+        assertThat(update.text()).contains("更新");
+
+        var question = assistantService.reply("追加ベンチプレス60kg8回？", Locale.JAPANESE);
+        assertThat(question.pendingAction()).isNull();
+        var missingCounter = assistantService.reply("追加ベンチプレス60kg8", Locale.JAPANESE);
+        assertThat(missingCounter.pendingAction()).isNull();
+        assertThat(assistantService.reply("追加 ベンチプレス 60kg 8", Locale.JAPANESE).pendingAction()).isNull();
+        assertThat(assistantService.reply("追加ベンチプレス 60kg8", Locale.JAPANESE).pendingAction()).isNull();
+        assertThat(assistantService.reply("追加 8回のスクワット 60kg 5", Locale.JAPANESE).pendingAction()).isNull();
+        assertThat(assistantService.reply("追加 10repsスクワット 60kg 5", Locale.JAPANESE).pendingAction()).isNull();
+
+        var numberedName = assistantService.reply("追加 8回のスクワット 60kg 5回", Locale.JAPANESE);
+        assertThat(numberedName.pendingAction()).isNotNull();
+        assertThat(numberedName.pendingAction().name()).isEqualTo("8回のスクワット");
+
+        var punctuation = assistantService.reply("追加：ベンチプレス60kg8回", Locale.JAPANESE);
+        assertThat(punctuation.pendingAction()).isNotNull();
+        assertThat(punctuation.pendingAction().name()).isEqualTo("ベンチプレス");
+
+        assertThat(assistantService.reply("追加しないでベンチプレス60kg8回", Locale.JAPANESE).pendingAction()).isNull();
+        assertThat(assistantService.reply("追加しませんベンチプレス60kg8回", Locale.JAPANESE).pendingAction()).isNull();
+        assertThat(assistantService.reply("追加したくないベンチプレス60kg8回", Locale.JAPANESE).pendingAction()).isNull();
+        assertThat(assistantService.reply("追加したくありませんベンチプレス60kg8回", Locale.JAPANESE).pendingAction()).isNull();
+        assertThat(assistantService.reply("追加しなくていいベンチプレス60kg8回", Locale.JAPANESE).pendingAction()).isNull();
+        assertThat(assistantService.reply("追加できないベンチプレス60kg8回", Locale.JAPANESE).pendingAction()).isNull();
+        assertThat(assistantService.reply("追加しようと思うベンチプレス60kg8回", Locale.JAPANESE).pendingAction()).isNull();
+        assertThat(assistantService.reply("追加したいベンチプレス60kg8回", Locale.JAPANESE).pendingAction()).isNull();
+    }
+
+    @Test
     void naturalVietnameseAddCommandRemovesFillersFromName() {
         var reply = assistantService.reply("hãy thêm giúp tôi bài tập Squat Pause 55kg 6 reps", Locale.forLanguageTag("vi"));
         assertThat(reply.pendingAction()).isNotNull();

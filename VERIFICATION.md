@@ -41,6 +41,7 @@ Ngày kiểm tra: 2026-09-22
 - `localMealAnalysisCalculatesKnownIngredients`
 - `bmiUsesAdultThresholdsForBothSexes`
 - `japaneseDisplayedAddCommandCreatesPendingAction`
+- `japaneseCompactAddCommandSupportsNoSpacesAndKeepsQuestionsNonMutating`
 - `profileRejectsNonFiniteNumbers`
 - `mealAnalysisRejectsUnknownMealType`
 - `dashboardRendersAllMainAreas`

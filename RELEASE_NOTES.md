@@ -34,6 +34,7 @@ Ngày: 2026-09-22
 - Pending action AI và meal analysis gắn owner; login mới xóa dữ liệu hội thoại/pending trong session.
 - Cải thiện parser lệnh AI: khoảng trắng/dấu câu linh hoạt, NFKC cho tiếng Nhật, `rep/reps/x/×`, cập nhật bài đã tồn tại và regression test đúng câu `thêm Squat 100kg 5reps`.
 - Sửa quan hệ JPA hai chiều giữa lịch tập và bài trong lịch; collection được đồng bộ khi thêm/xóa nên test và cùng một transaction không còn `IndexOutOfBoundsException`.
+- Sửa parser tiếng Nhật để nhận lệnh viết liền như `追加ベンチプレス60kg 8回`, xử lý dấu câu và từ chối câu hỏi/phủ định hoặc lệnh thiếu đơn vị số lần.
 
 ## Lưu ý nâng cấp dữ liệu
 

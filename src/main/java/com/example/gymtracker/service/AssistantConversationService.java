@@ -18,14 +18,20 @@ import java.util.regex.Pattern;
 public class AssistantConversationService {
     private static final Pattern ADD_PREFIX = Pattern.compile(
             "(?iu)^\\s*(?:(?:hãy|vui\\s+lòng|please|tôi\\s+muốn|mình\\s+muốn|can\\s+you|could\\s+you)\\s+)*" +
-                    "(?:(?:thêm|add)(?:\\s+|\\s*[,;:\\-]\\s*)|(?:種目追加|追加)(?:\\s+|\\s*[,;:\\-]\\s*))(.+?)\\s*$");
+                    "(?:(?:thêm|add)(?:\\s+|\\s*[,;:\\-]\\s*)|(?:種目追加|追加)\\s*[,、;:\\-]?\\s*)(.+?)\\s*$");
     private static final Pattern ADD_FILLER = Pattern.compile(
             "(?iu)^(?:(?:giúp|cho|hộ)\\s+(?:tôi|mình)(?:\\s+(?:bài\\s+tập|bài|exercise|種目))?|" +
                     "bài\\s+tập|bài|exercise|種目|を)(?:\\s+|\\s*[,;:\\-]\\s*)");
     private static final Pattern ADD_DETAILS = Pattern.compile(
             "(?iu)^(.+?)[\\s,、;:\\-]+(\\d{1,6})\\s*(?:kg|キロ)\\s*[,、;:/\\-]?\\s*(?:[x×]\\s*)?" +
-                    "(\\d{1,6})\\s*(?:reps?|lần|回)?\\s*[,;]*\\s*" +
+                    "(\\d{1,6})\\s*(reps?|lần|回)?\\s*[,;]*\\s*" +
                     "(?:(?:nhé|nha|ạ|please|giúp\\s+(?:tôi|mình)|cho\\s+(?:tôi|mình)|してください|お願いします)\\s*)*[.!。！]*$");
+    private static final Pattern JAPANESE_ADD_PREFIX = Pattern.compile("(?iu)^\\s*(?:種目追加|追加)\\s*[,、;:\\-]?\\s*");
+    private static final Pattern JAPANESE_NON_COMMAND_PREFIX = Pattern.compile(
+            "^(?:しな(?:い(?:で)?|くて(?:も)?(?:いい|よい)?)|しません|したく(?:ない|ありません)|したい|" +
+                    "しよう(?:と思う)?|する|すべき|でき(?:る|ない|ません))");
+    private static final Pattern JAPANESE_COMPACT_ADD_DETAILS = Pattern.compile(
+            "(?iu)^(.+?)(\\d{1,6})\\s*(?:kg|キロ)\\s*(?:[x×]\\s*)?(\\d{1,6})\\s*回\\s*[.!。！]*$");
     private static final Pattern DELETE = Pattern.compile("(?iu)^(?:(?:hãy|vui lòng|please)\\s+)?(?:xóa|xoá|delete|remove|削除|種目削除)\\s+(?:(?:giúp tôi|cho tôi|bài tập|bài|exercise|種目)\\s+)*(.+?)$");
     private static final Pattern LIST = Pattern.compile(
             "(?iu)^\\s*(?:(?:hãy|vui\\s+lòng|please|cho\\s+(?:tôi|mình)\\s+xem)\\s+)*" +
@@ -113,13 +119,23 @@ public class AssistantConversationService {
         if (message.indexOf('?') >= 0 || message.indexOf('？') >= 0) return null;
         Matcher prefix = ADD_PREFIX.matcher(message);
         if (!prefix.matches()) return null;
+        boolean japaneseAdd = JAPANESE_ADD_PREFIX.matcher(message).find();
         String payload = prefix.group(1).trim();
+        // Japanese intent/negation phrases describe or reject an action; they are not save commands.
+        if (japaneseAdd && JAPANESE_NON_COMMAND_PREFIX.matcher(payload).find()) return null;
         Matcher filler = ADD_FILLER.matcher(payload);
         if (filler.find()) {
             payload = payload.substring(filler.end()).trim();
         }
         Matcher details = ADD_DETAILS.matcher(payload);
-        if (!details.matches()) return null;
+        boolean generalDetailsMatch = details.matches();
+        if (japaneseAdd && generalDetailsMatch
+                && (details.group(4) == null || "lần".equalsIgnoreCase(details.group(4)))) return null;
+        if (!generalDetailsMatch) {
+            if (!japaneseAdd) return null;
+            details = JAPANESE_COMPACT_ADD_DETAILS.matcher(payload);
+            if (!details.matches()) return null;
+        }
         String name = details.group(1).trim().replaceAll("\\s+", " ");
         if (name.isBlank()) return null;
         return new AddCommand(name, parseInt(details.group(2)), parseInt(details.group(3)));
